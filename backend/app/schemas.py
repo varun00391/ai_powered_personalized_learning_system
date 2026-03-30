@@ -70,6 +70,13 @@ class OnboardingAnswers(BaseModel):
         return self.model_copy(update={"custom_goal_description": None})
 
 
+class KnowledgeCheckOut(BaseModel):
+    question: str
+    choices: list[str] = Field(..., min_length=2, max_length=8)
+    correct_index: int = Field(ge=0)
+    explanation: str = ""
+
+
 class PhaseOut(BaseModel):
     phase_index: int
     title: str
@@ -78,6 +85,15 @@ class PhaseOut(BaseModel):
     estimated_weeks: float
     suggested_formats: list[str]
     unlocked: bool
+    learning_objectives: list[str] = Field(default_factory=list)
+    study_tips: list[str] = Field(default_factory=list)
+    key_activities: list[str] = Field(default_factory=list)
+    knowledge_checks: list[KnowledgeCheckOut] = Field(default_factory=list)
+
+
+class PhaseStudyGuideOut(BaseModel):
+    content: str
+    source: Literal["groq", "template"]
 
 
 class LearningPathOut(BaseModel):

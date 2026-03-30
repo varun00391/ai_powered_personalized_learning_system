@@ -5,6 +5,7 @@ import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import PhaseStudyPage from "./pages/PhaseStudyPage.jsx";
 
 function LoadingScreen() {
   return (
@@ -49,6 +50,14 @@ export default function App() {
         element={
           <DashboardRoute>
             <Dashboard />
+          </DashboardRoute>
+        }
+      />
+      <Route
+        path="/dashboard/phase/:phaseIndex"
+        element={
+          <DashboardRoute>
+            <PhaseStudyPage />
           </DashboardRoute>
         }
       />

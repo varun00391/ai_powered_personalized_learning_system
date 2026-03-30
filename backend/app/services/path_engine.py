@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from app.services.phase_enrichment import enrich_phases_list
+
 
 @dataclass(frozen=True)
 class CareerDef:
@@ -168,6 +170,8 @@ def build_personalized_path(
                 "unlocked": idx == 0,
             }
         )
+
+    phases_out = enrich_phases_list(phases_out, learning_style=learning_style.lower())
 
     course_weeks = round((total_hours / max(hours_per_week, 1)) * flex_m, 1)
     notes = (

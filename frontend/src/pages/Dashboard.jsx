@@ -1,30 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const WELCOME_ASSISTANT =
-  "Hi — I'm **LearnGuide**. Ask me anything about your path, study habits, or concepts. " +
-  "Select a **phase** below for more detail; I'll use it as context when you chat.";
-
-function buildPhaseContext(phase) {
-  if (!phase) return null;
-  return {
-    phase_index: phase.phase_index,
-    title: phase.title,
-    skills: phase.skills || [],
-    estimated_hours: phase.estimated_hours ?? null,
-    suggested_formats: phase.suggested_formats || null,
-  };
-}
+  "Hi — I'm **LearnGuide**. **Open any phase** from your path to get an AI study guide, then knowledge-check questions. " +
+  "You can also ask me anything about your plan here.";
 
 export default function Dashboard() {
+  const nav = useNavigate();
   const { token, user, logout } = useAuth();
   const [path, setPath] = useState(null);
   const [recs, setRecs] = useState([]);
   const [messages, setMessages] = useState([{ role: "assistant", content: WELCOME_ASSISTANT }]);
   const [input, setInput] = useState("");
-  const [selectedPhase, setSelectedPhase] = useState(null);
   const [activityOpen, setActivityOpen] = useState(null);
   const [loadingPath, setLoadingPath] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
@@ -69,7 +58,7 @@ export default function Dashboard() {
         token,
         body: {
           messages: historyForApi,
-          phase_context: buildPhaseContext(selectedPhase),
+          phase_context: null,
         },
       });
       setMessages((m) => [...m, { role: "assistant", content: res.reply }]);
@@ -81,16 +70,6 @@ export default function Dashboard() {
     } finally {
       setChatLoading(false);
     }
-  }
-
-  function insertPhasePrompt() {
-    if (!selectedPhase) return;
-    const p = selectedPhase;
-    const skills = (p.skills || []).slice(0, 8).join(", ");
-    setInput(
-      `I'd like help with Phase ${p.phase_index} (${p.title}). ` +
-        `Where should I start with: ${skills}? Give me a 2-week micro-plan.`
-    );
   }
 
   function clearChat() {
@@ -120,8 +99,11 @@ export default function Dashboard() {
       <main className="mx-auto max-w-6xl px-6 py-10">
         <h1 className="font-display text-3xl font-bold text-white">Your dashboard</h1>
         <p className="mt-2 max-w-3xl text-slate-400">
-          Your roadmap and recommendations are live. <strong className="font-medium text-slate-300">Videos, hosted labs, and graded quizzes</strong> are not wired in this starter yet — see each recommendation for what will plug in next; the tutor works today (best with{" "}
-          <code className="text-indigo-300">GROQ_API_KEY</code>).
+          <strong className="font-medium text-slate-300">Click a phase</strong> to open its page: an{" "}
+          <strong className="font-medium text-slate-300">AI study guide</strong> (Groq when configured), then{" "}
+          <strong className="font-medium text-slate-300">MCQ knowledge checks</strong> after you finish reading.
+          Streaming video and graded quiz APIs are still placeholders — see recommendations. Tutor:{" "}
+          <code className="text-indigo-300">GROQ_API_KEY</code>.
         </p>
 
         <div className="mt-10 flex flex-col gap-8 lg:flex-row lg:items-stretch">
@@ -154,82 +136,46 @@ export default function Dashboard() {
                     </p>
                   )}
                   <p className="text-xs text-slate-500">
-                    <span className="text-indigo-300">Tip:</span> click a phase to select it — details appear below;
-                    the AI tutor uses the selected phase as context.
+                    <span className="text-indigo-300">Tip:</span> open a phase for an AI-written study guide, then
+                    knowledge checks on the next step.
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {path.phases.map((ph) => {
-                      const isSel = selectedPhase?.phase_index === ph.phase_index;
-                      return (
-                        <button
-                          key={ph.phase_index}
-                          type="button"
-                          onClick={() => setSelectedPhase(isSel ? null : ph)}
-                          className={`rounded-2xl border p-4 text-left transition ${
-                            isSel
-                              ? "border-indigo-400/70 bg-indigo-500/15 ring-2 ring-indigo-500/30"
-                              : ph.unlocked
-                                ? "border-indigo-500/30 bg-indigo-500/5 hover:border-indigo-400/50"
-                                : "border-white/10 bg-white/[0.02] hover:border-white/20"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <h3 className="font-medium text-white">
-                              Phase {ph.phase_index} — {ph.title}
-                            </h3>
-                            {ph.unlocked && (
-                              <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                          <ul className="mt-2 max-h-24 list-inside list-disc overflow-y-auto text-left text-sm text-slate-400">
-                            {ph.skills.map((s) => (
-                              <li key={s}>{s}</li>
-                            ))}
-                          </ul>
-                          <p className="mt-2 text-xs text-slate-500">
-                            ~{ph.estimated_hours}h · ~{ph.estimated_weeks} wk
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {selectedPhase && (
-                    <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-5">
-                      <h3 className="font-display text-base font-semibold text-white">
-                        Phase {selectedPhase.phase_index}: {selectedPhase.title}
-                      </h3>
-                      <p className="mt-2 text-sm text-slate-300">
-                        This phase groups the skills you’ll build before moving on. In a full LearnOS deployment, each
-                        phase links to ordered <strong className="font-medium text-white">modules</strong> (video +
-                        reading), <strong className="font-medium text-white">knowledge checks</strong>, and{" "}
-                        <strong className="font-medium text-white">labs</strong> — those need a CMS, media pipeline, and
-                        assessment service (per your architecture doc).
-                      </p>
-                      <ul className="mt-3 list-inside list-disc text-sm text-slate-400">
-                        {(selectedPhase.skills || []).map((s) => (
-                          <li key={s}>{s}</li>
-                        ))}
-                      </ul>
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                        <span>~{selectedPhase.estimated_hours} hours</span>
-                        <span>·</span>
-                        <span>~{selectedPhase.estimated_weeks} weeks at your pace</span>
-                      </div>
-                      <p className="mt-2 text-xs text-indigo-200/90">
-                        Formats: {(selectedPhase.suggested_formats || []).join(", ")}
-                      </p>
+                    {path.phases.map((ph) => (
                       <button
+                        key={ph.phase_index}
                         type="button"
-                        onClick={insertPhasePrompt}
-                        className="mt-4 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/15 hover:bg-white/15"
+                        onClick={() => nav(`/dashboard/phase/${ph.phase_index}`)}
+                        className={`rounded-2xl border p-4 text-left transition hover:ring-2 hover:ring-indigo-500/20 ${
+                          ph.unlocked
+                            ? "border-indigo-500/30 bg-indigo-500/5 hover:border-indigo-400/50"
+                            : "border-white/10 bg-white/[0.02] hover:border-white/20"
+                        }`}
                       >
-                        Draft message to AI about this phase
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="font-medium text-white">
+                            Phase {ph.phase_index} — {ph.title}
+                          </h3>
+                          {ph.unlocked && (
+                            <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        <ul className="mt-2 max-h-24 list-inside list-disc overflow-y-auto text-left text-sm text-slate-400">
+                          {ph.skills.map((s) => (
+                            <li key={s}>{s}</li>
+                          ))}
+                        </ul>
+                        <p className="mt-3 text-xs font-medium text-indigo-300/90">Open study page →</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          ~{ph.estimated_hours}h · ~{ph.estimated_weeks} wk
+                          {ph.knowledge_checks?.length > 0 && (
+                            <span className="ml-2 text-slate-500">· {ph.knowledge_checks.length} checks after reading</span>
+                          )}
+                        </p>
                       </button>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -267,9 +213,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <div>
                 <h2 className="font-display text-lg font-semibold text-white">AI tutor</h2>
-                <p className="text-xs text-slate-500">
-                  {selectedPhase ? `Context: phase ${selectedPhase.phase_index}` : "No phase selected"}
-                </p>
+                <p className="text-xs text-slate-500">General coaching</p>
               </div>
               <button
                 type="button"
@@ -357,8 +301,9 @@ export default function Dashboard() {
 
             <div className="mt-6 space-y-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
               <p>
-                <strong className="text-slate-200">Current build:</strong> this app stores your path and suggestions
-                only. There is no video file, quiz engine, or lab runner connected yet.
+                <strong className="text-slate-200">Current build:</strong> each phase has its own page with a study guide
+                and MCQs. This card is still a placeholder for a{" "}
+                <strong className="text-slate-300">hosted lesson</strong> (video stream + tracked quiz submission).
               </p>
               <p>
                 <strong className="text-slate-200">Next integration steps:</strong> attach a content service (URLs for

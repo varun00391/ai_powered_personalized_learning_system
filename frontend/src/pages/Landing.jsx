@@ -43,9 +43,6 @@ export default function Landing() {
           <a href="#product" className="text-slate-400 hover:text-white transition">
             Product
           </a>
-          <a href="#how" className="text-slate-400 hover:text-white transition">
-            How it works
-          </a>
           {token ? (
             <Link
               to={ctaTo}
@@ -93,10 +90,10 @@ export default function Landing() {
                 Start personalising
               </Link>
               <a
-                href="#how"
+                href="#product"
                 className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-8 py-3 text-base font-medium text-white hover:bg-white/10"
               >
-                See the flow
+                Explore features
               </a>
             </div>
             <dl className="mt-12 grid grid-cols-3 gap-6 border-t border-white/10 pt-10 text-sm">
@@ -190,25 +187,6 @@ export default function Landing() {
               </article>
             ))}
           </div>
-        </section>
-
-        <section id="how" className="mt-24 scroll-mt-24 rounded-3xl border border-white/10 bg-gradient-to-br from-ink-900/90 to-ink-950 p-10 md:p-14">
-          <h2 className="font-display text-2xl font-bold text-white md:text-3xl">How it works</h2>
-          <ol className="mt-8 grid gap-6 md:grid-cols-2">
-            {[
-              "Create an account — JWT auth, profile stored in Postgres.",
-              "Answer onboarding: career goal, Python/SQL comfort, learning style, hours/week, study windows, flexibility.",
-              "Backend generates phased skills, hour estimates, and weeks-to-complete from your inputs.",
-              "Dashboard shows path, recommendations (cold-start), and a simple AI tutor panel.",
-            ].map((step, i) => (
-              <li key={step} className="flex gap-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-sm font-bold text-indigo-200">
-                  {i + 1}
-                </span>
-                <p className="text-slate-300">{step}</p>
-              </li>
-            ))}
-          </ol>
         </section>
       </main>
 

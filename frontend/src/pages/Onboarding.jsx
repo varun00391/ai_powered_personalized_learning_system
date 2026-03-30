@@ -3,14 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext.jsx";
 
-const STEPS = [
-  "goal",
-  "skills",
-  "style",
-  "time",
-  "windows",
-  "flex",
-];
+const STEPS = ["goal", "skills", "time", "windows", "flex"];
 
 export default function Onboarding() {
   const { token, refreshUser } = useAuth();
@@ -25,7 +18,7 @@ export default function Onboarding() {
   const [customGoalDescription, setCustomGoalDescription] = useState("");
   const [pythonLevel, setPythonLevel] = useState("beginner");
   const [sqlLevel, setSqlLevel] = useState("never");
-  const [learningStyle, setLearningStyle] = useState("video");
+  const learningStyle = "video";
   const [hoursPerWeek, setHoursPerWeek] = useState(5);
   const [windows, setWindows] = useState([]);
   const [flex, setFlex] = useState("somewhat_flexible");
@@ -223,33 +216,6 @@ export default function Onboarding() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <h2 className="font-display text-lg font-semibold text-white">How do you learn best?</h2>
-              <div className="grid gap-3">
-                {[
-                  ["video", "Video-first", "Explainers, walkthroughs, demos"],
-                  ["reading", "Reading", "Articles, docs, structured notes"],
-                  ["hands-on", "Hands-on", "Labs, projects, learn by building"],
-                ].map(([v, title, sub]) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setLearningStyle(v)}
-                    className={`rounded-2xl border px-4 py-4 text-left transition ${
-                      learningStyle === v
-                        ? "border-indigo-500/60 bg-indigo-500/10"
-                        : "border-white/10 hover:border-white/20"
-                    }`}
-                  >
-                    <p className="font-medium text-white">{title}</p>
-                    <p className="text-sm text-slate-400">{sub}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4">
               <h2 className="font-display text-lg font-semibold text-white">Weekly time budget</h2>
               <p className="text-sm text-slate-400">
                 We use this to estimate how many calendar weeks your path may take.
@@ -268,7 +234,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <div className="space-y-4">
               <h2 className="font-display text-lg font-semibold text-white">Preferred study windows</h2>
               <p className="text-sm text-slate-400">Select all that usually work — we’ll respect this in nudges later.</p>
@@ -305,7 +271,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 4 && (
             <div className="space-y-4">
               <h2 className="font-display text-lg font-semibold text-white">Schedule flexibility</h2>
               <p className="text-sm text-slate-400">

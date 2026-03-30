@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from app.services.groq_client import groq_generate_custom_path_json
+from app.services.phase_enrichment import enrich_phases_list
 from app.services.path_engine import (
     _experience_band,
     _flexibility_week_multiplier,
@@ -118,6 +119,8 @@ async def build_custom_personalized_path(
                 "unlocked": idx == 0,
             }
         )
+
+    phases_out = enrich_phases_list(phases_out, learning_style=learning_style.lower())
 
     course_weeks = round((total_hours / max(hours_per_week, 1)) * flex_m, 1)
     notes = (
