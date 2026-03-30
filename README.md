@@ -1,4 +1,4 @@
-# LearnOS AI — Personalized learning (reference app)
+# LearnOS AI — Personalized learning
 
 A full-stack reference implementation of a **personalized learning path** system: onboarding captures goals, experience, schedule, and weekly availability; the backend builds phased roadmaps with **objectives, study tips, activities, and knowledge-check questions**; each phase opens a **dedicated page** with an **AI study guide** (Groq) and **MCQs after reading**—with `**GROQ_API_KEY` set, those MCQs are generated from the same study guide text** (otherwise they use the phase template checks); the **dashboard** also includes a **multi-turn AI tutor** (Groq).
 
@@ -12,7 +12,7 @@ This is a **foundation** you can extend with real video CMS, HLS playback, and a
 | Area               | Details                                                                                                                                |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | **Auth**           | Register / login, JWT (access token in `localStorage`).                                                                                |
-| **Onboarding**     | Career presets or **custom free-text goal**; Python/SQL level; hours/week; study windows; flexibility. **Re-run anytime** (“Change learning path”) — replaces the current path. |
+| **Onboarding**     | Career presets or **custom** goal; **path-specific** comfort questions (`GET /careers` returns `asks_python` / `asks_sql` — e.g. Cloud Architect skips both; Full-Stack asks SQL only; Data/ML + custom ask both); hours/week; windows; flexibility. **Re-run anytime** (“Change learning path”). |
 | **Learning paths** | Preset tracks (e.g. Data Engineer, ML Engineer) or **Groq-generated** phases for custom goals (with offline fallback).                 |
 | **Dashboard**      | Path overview; **phase pages** (multi-lesson study guide → MCQs); recommendations; ChatGPT-style **tutor chat**.                       |
 | **AI**             | **Groq** OpenAI-compatible API for tutor + optional custom path generation. Works offline with templated responses when no key is set. |

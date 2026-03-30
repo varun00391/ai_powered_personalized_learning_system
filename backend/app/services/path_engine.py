@@ -22,6 +22,23 @@ class CareerDef:
     """Each phase: (title, skills, base_hours_for_phase)"""
 
 
+# Which intake questions apply per preset career: (ask_python, ask_sql).
+# Custom goals always ask both (see get_career_skill_intake).
+CAREER_SKILL_INTAKE: dict[str, tuple[bool, bool]] = {
+    "career_data_engineer": (True, True),
+    "career_ml_engineer": (True, True),
+    "career_fullstack": (False, True),
+    "career_cloud_architect": (False, False),
+}
+
+
+def get_career_skill_intake(career_goal_id: str) -> tuple[bool, bool]:
+    """Return (ask_python, ask_sql) for onboarding and path personalization."""
+    if career_goal_id == "custom":
+        return (True, True)
+    return CAREER_SKILL_INTAKE.get(career_goal_id, (True, True))
+
+
 CAREERS: dict[str, CareerDef] = {
     "career_data_engineer": CareerDef(
         id="career_data_engineer",
@@ -86,15 +103,36 @@ def list_careers() -> list[CareerDef]:
     return list(CAREERS.values())
 
 
-def _experience_band(python_level: str, sql_level: str) -> str:
-    scores = []
-    for p in (python_level, sql_level):
-        if p in ("beginner", "never"):
+def _experience_band(
+    python_level: str,
+    sql_level: str,
+    *,
+    apply_python: bool = True,
+    apply_sql: bool = True,
+) -> str:
+    scores: list[int] = []
+    if apply_python:
+        p = python_level.lower()
+        if p == "beginner":
             scores.append(0)
-        elif p in ("some", "basics"):
+        elif p == "some":
             scores.append(1)
-        else:
+        elif p == "comfortable":
             scores.append(2)
+        else:
+            scores.append(1)
+    if apply_sql:
+        s = sql_level.lower()
+        if s == "never":
+            scores.append(0)
+        elif s == "basics":
+            scores.append(1)
+        elif s == "proficient":
+            scores.append(2)
+        else:
+            scores.append(1)
+    if not scores:
+        return "intermediate"
     avg = sum(scores) / len(scores)
     if avg < 0.7:
         return "beginner"
@@ -103,17 +141,27 @@ def _experience_band(python_level: str, sql_level: str) -> str:
     return "advanced"
 
 
-def _skills_to_skip_fraction(python_level: str, sql_level: str) -> float:
+def _skills_to_skip_fraction(
+    python_level: str,
+    sql_level: str,
+    *,
+    apply_python: bool = True,
+    apply_sql: bool = True,
+) -> float:
     """Approximate 'mastery overlay': higher skill → fewer remaining hours in early phases."""
     skip = 0.0
-    if python_level == "comfortable":
-        skip += 0.12
-    elif python_level == "some":
-        skip += 0.05
-    if sql_level == "proficient":
-        skip += 0.10
-    elif sql_level == "basics":
-        skip += 0.04
+    py = python_level.lower()
+    sql = sql_level.lower()
+    if apply_python:
+        if py == "comfortable":
+            skip += 0.12
+        elif py == "some":
+            skip += 0.05
+    if apply_sql:
+        if sql == "proficient":
+            skip += 0.10
+        elif sql == "basics":
+            skip += 0.04
     return min(skip, 0.35)
 
 
@@ -146,9 +194,12 @@ def build_personalized_path(
     if not career:
         career = CAREERS["career_data_engineer"]
 
-    skip_frac = _skills_to_skip_fraction(python_level.lower(), sql_level.lower())
+    apply_py, apply_sql = get_career_skill_intake(career_goal_id)
+    py = python_level.lower()
+    sql = sql_level.lower()
+    skip_frac = _skills_to_skip_fraction(py, sql, apply_python=apply_py, apply_sql=apply_sql)
     flex_m = _flexibility_week_multiplier(schedule_flexibility)
-    experience = _experience_band(python_level.lower(), sql_level.lower())
+    experience = _experience_band(py, sql, apply_python=apply_py, apply_sql=apply_sql)
 
     phases_out: list[dict[str, Any]] = []
     total_hours = 0.0

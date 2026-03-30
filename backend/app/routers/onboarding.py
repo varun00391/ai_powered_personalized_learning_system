@@ -10,7 +10,7 @@ from app.dependencies import get_current_user
 from app.models import LearningPath, User
 from app.schemas import LearningPathOut, OnboardingAnswers, PhaseOut
 from app.services.custom_path import build_custom_personalized_path
-from app.services.path_engine import build_personalized_path
+from app.services.path_engine import build_personalized_path, get_career_skill_intake
 
 router = APIRouter(prefix="/api/v1", tags=["onboarding"])
 
@@ -24,6 +24,7 @@ async def submit_onboarding(
     """Create or **replace** the user's learning path (safe to call again after changing goals)."""
     if body.career_goal_id == "custom":
         assert body.custom_goal_description is not None
+        assert body.python_level and body.sql_level
         path = await build_custom_personalized_path(
             body.custom_goal_description,
             body.python_level,
@@ -35,10 +36,12 @@ async def submit_onboarding(
         )
         user.custom_goal_text = body.custom_goal_description
     else:
+        py_eff = (body.python_level or "some").lower()
+        sql_eff = (body.sql_level or "basics").lower()
         path = build_personalized_path(
             body.career_goal_id,
-            body.python_level,
-            body.sql_level,
+            py_eff,
+            sql_eff,
             body.learning_style,
             body.hours_per_week,
             body.schedule_flexibility,
@@ -49,9 +52,11 @@ async def submit_onboarding(
     user.learning_style = body.learning_style
     user.hours_per_week = body.hours_per_week
     user.experience_band = path["experience_band"]
+    ask_py, ask_sql = get_career_skill_intake(body.career_goal_id)
     user.skill_snapshot = {
-        "python_level": body.python_level,
-        "sql_level": body.sql_level,
+        "python_level": body.python_level if ask_py else None,
+        "sql_level": body.sql_level if ask_sql else None,
+        "skill_intake": {"asks_python": ask_py, "asks_sql": ask_sql},
     }
     user.preferred_study_windows = body.preferred_study_windows
     user.schedule_flexibility = body.schedule_flexibility

@@ -46,8 +46,14 @@ class OnboardingAnswers(BaseModel):
         max_length=4000,
         description="Required when career_goal_id is 'custom': what the learner wants to learn.",
     )
-    python_level: str = Field(description="beginner | some | comfortable")
-    sql_level: str = Field(description="never | basics | proficient")
+    python_level: str | None = Field(
+        default=None,
+        description="beginner | some | comfortable — required only for paths that ask for Python.",
+    )
+    sql_level: str | None = Field(
+        default=None,
+        description="never | basics | proficient — required only for paths that ask for SQL.",
+    )
     learning_style: str = Field(description="video | reading | hands-on")
     hours_per_week: int = Field(ge=1, le=40)
     preferred_study_windows: list[str] = Field(
@@ -60,15 +66,33 @@ class OnboardingAnswers(BaseModel):
     timezone: str | None = None
 
     @model_validator(mode="after")
-    def validate_custom_goal(self):
+    def validate_onboarding(self):
+        from app.services.path_engine import get_career_skill_intake
+
         if self.career_goal_id == "custom":
             t = (self.custom_goal_description or "").strip()
             if len(t) < 8:
                 raise ValueError(
                     "When you choose Custom, describe your goal in your own words (at least 8 characters)."
                 )
-            return self.model_copy(update={"custom_goal_description": t})
-        return self.model_copy(update={"custom_goal_description": None})
+            self = self.model_copy(update={"custom_goal_description": t})
+        else:
+            self = self.model_copy(update={"custom_goal_description": None})
+
+        ask_py, ask_sql = get_career_skill_intake(self.career_goal_id)
+        if ask_py and not (self.python_level or "").strip():
+            raise ValueError("Python comfort level is required for this learning path.")
+        if ask_sql and not (self.sql_level or "").strip():
+            raise ValueError("SQL comfort level is required for this learning path.")
+
+        updates: dict[str, str | None] = {}
+        if not ask_py:
+            updates["python_level"] = None
+        if not ask_sql:
+            updates["sql_level"] = None
+        if updates:
+            self = self.model_copy(update=updates)
+        return self
 
 
 class KnowledgeCheckOut(BaseModel):
@@ -196,3 +220,5 @@ class CareerOption(BaseModel):
     title: str
     domain: str
     blurb: str
+    asks_python: bool = True
+    asks_sql: bool = True

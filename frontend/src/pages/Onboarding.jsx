@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext.jsx";
-
-const STEPS = ["goal", "skills", "time", "windows", "flex"];
 
 export default function Onboarding() {
   const { token, user, loading: authLoading, refreshUser } = useAuth();
@@ -49,8 +47,12 @@ export default function Onboarding() {
     if (user.custom_goal_text) setCustomGoalDescription(user.custom_goal_text);
     const snap = user.skill_snapshot;
     if (snap && typeof snap === "object") {
-      if (snap.python_level) setPythonLevel(String(snap.python_level));
-      if (snap.sql_level) setSqlLevel(String(snap.sql_level));
+      if (snap.python_level != null && snap.python_level !== "") {
+        setPythonLevel(String(snap.python_level));
+      }
+      if (snap.sql_level != null && snap.sql_level !== "") {
+        setSqlLevel(String(snap.sql_level));
+      }
     }
     if (user.hours_per_week != null) setHoursPerWeek(user.hours_per_week);
     if (Array.isArray(user.preferred_study_windows)) {
@@ -59,6 +61,26 @@ export default function Onboarding() {
     if (user.schedule_flexibility) setFlex(user.schedule_flexibility);
     if (user.timezone) setTimezone(user.timezone);
   }, [user, careers.length]);
+
+  const selectedCareer = useMemo(
+    () => careers.find((c) => c.id === careerGoalId),
+    [careers, careerGoalId]
+  );
+
+  const asksPython = Boolean(selectedCareer?.asks_python);
+  const asksSql = Boolean(selectedCareer?.asks_sql);
+  const skillStepNeeded = asksPython || asksSql;
+
+  const stepFlow = useMemo(() => {
+    const flow = ["goal"];
+    if (skillStepNeeded) flow.push("skills");
+    flow.push("time", "windows", "flex");
+    return flow;
+  }, [skillStepNeeded]);
+
+  useEffect(() => {
+    setStep((s) => Math.min(s, Math.max(0, stepFlow.length - 1)));
+  }, [careerGoalId, stepFlow.length]);
 
   function toggleWindow(w) {
     setWindows((prev) => (prev.includes(w) ? prev.filter((x) => x !== w) : [...prev, w]));
@@ -75,8 +97,8 @@ export default function Onboarding() {
           career_goal_id: careerGoalId,
           custom_goal_description:
             careerGoalId === "custom" ? customGoalDescription.trim() || null : null,
-          python_level: pythonLevel,
-          sql_level: sqlLevel,
+          python_level: asksPython ? pythonLevel : null,
+          sql_level: asksSql ? sqlLevel : null,
           learning_style: learningStyle,
           hours_per_week: hoursPerWeek,
           preferred_study_windows: windows,
@@ -94,7 +116,7 @@ export default function Onboarding() {
   }
 
   function next() {
-    if (step < STEPS.length - 1) setStep((s) => s + 1);
+    if (step < stepFlow.length - 1) setStep((s) => s + 1);
     else finish();
   }
 
@@ -102,9 +124,13 @@ export default function Onboarding() {
     setStep((s) => Math.max(0, s - 1));
   }
 
-  const progress = Math.round(((step + 1) / STEPS.length) * 100);
+  const progress = Math.round(((step + 1) / stepFlow.length) * 100);
+  const stepKind = stepFlow[step] || "goal";
 
   const isChangingPath = Boolean(user?.onboarding_complete);
+
+  const canContinueGoal =
+    Boolean(careerGoalId) && (careerGoalId !== "custom" || customGoalDescription.trim().length >= 8);
 
   return (
     <div className="min-h-screen bg-ink-950 px-4 py-10">
@@ -147,12 +173,12 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 0 && (
+          {stepKind === "goal" && (
             <div className="space-y-4">
               <h2 className="font-display text-lg font-semibold text-white">What do you want to achieve?</h2>
               <p className="text-sm text-slate-400">
                 Pick a template or choose <strong className="text-slate-300">Something else</strong> and describe
-                what you want in your own words.
+                what you want in your own words. The next step only asks comfort questions that matter for that path.
               </p>
               {loadingCareers ? (
                 <p className="text-slate-500">Loading…</p>
@@ -204,59 +230,68 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 1 && (
+          {stepKind === "skills" && (
             <div className="space-y-6">
               <h2 className="font-display text-lg font-semibold text-white">Your starting point</h2>
-              <div>
-                <p className="text-sm text-slate-400">Python comfort</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {[
-                    ["beginner", "Beginner"],
-                    ["some", "Some experience"],
-                    ["comfortable", "Comfortable"],
-                  ].map(([v, label]) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setPythonLevel(v)}
-                      className={`rounded-full px-4 py-2 text-sm ${
-                        pythonLevel === v
-                          ? "bg-indigo-500 text-white"
-                          : "bg-white/5 text-slate-300 ring-1 ring-white/10"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+              <p className="text-sm text-slate-400">
+                {asksPython && asksSql
+                  ? "We use this to tune early-phase hours for programming and database skills."
+                  : "This track uses SQL in several phases — your answer helps calibrate database-related weeks."}
+              </p>
+              {asksPython && (
+                <div>
+                  <p className="text-sm text-slate-400">Python comfort</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[
+                      ["beginner", "Beginner"],
+                      ["some", "Some experience"],
+                      ["comfortable", "Comfortable"],
+                    ].map(([v, label]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setPythonLevel(v)}
+                        className={`rounded-full px-4 py-2 text-sm ${
+                          pythonLevel === v
+                            ? "bg-indigo-500 text-white"
+                            : "bg-white/5 text-slate-300 ring-1 ring-white/10"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-sm text-slate-400">SQL</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {[
-                    ["never", "Never"],
-                    ["basics", "Basics"],
-                    ["proficient", "Proficient"],
-                  ].map(([v, label]) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setSqlLevel(v)}
-                      className={`rounded-full px-4 py-2 text-sm ${
-                        sqlLevel === v
-                          ? "bg-indigo-500 text-white"
-                          : "bg-white/5 text-slate-300 ring-1 ring-white/10"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+              )}
+              {asksSql && (
+                <div>
+                  <p className="text-sm text-slate-400">SQL</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[
+                      ["never", "Never"],
+                      ["basics", "Basics"],
+                      ["proficient", "Proficient"],
+                    ].map(([v, label]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setSqlLevel(v)}
+                        className={`rounded-full px-4 py-2 text-sm ${
+                          sqlLevel === v
+                            ? "bg-indigo-500 text-white"
+                            : "bg-white/5 text-slate-300 ring-1 ring-white/10"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-          {step === 2 && (
+          {stepKind === "time" && (
             <div className="space-y-4">
               <h2 className="font-display text-lg font-semibold text-white">Weekly time budget</h2>
               <p className="text-sm text-slate-400">
@@ -276,7 +311,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 3 && (
+          {stepKind === "windows" && (
             <div className="space-y-4">
               <h2 className="font-display text-lg font-semibold text-white">Preferred study windows</h2>
               <p className="text-sm text-slate-400">Select all that usually work — we’ll respect this in nudges later.</p>
@@ -313,7 +348,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 4 && (
+          {stepKind === "flex" && (
             <div className="space-y-4">
               <h2 className="font-display text-lg font-semibold text-white">Schedule flexibility</h2>
               <p className="text-sm text-slate-400">
@@ -361,12 +396,11 @@ export default function Onboarding() {
               disabled={
                 submitting ||
                 loadingCareers ||
-                !careerGoalId ||
-                (careerGoalId === "custom" && customGoalDescription.trim().length < 8)
+                (stepKind === "goal" && !canContinueGoal)
               }
               className="rounded-xl bg-indigo-500 px-6 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
             >
-              {step === STEPS.length - 1
+              {step === stepFlow.length - 1
                 ? submitting
                   ? "Saving…"
                   : isChangingPath
