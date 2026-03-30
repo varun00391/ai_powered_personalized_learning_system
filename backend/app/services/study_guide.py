@@ -252,7 +252,7 @@ Output **GitHub-flavored Markdown only** (no outer wrapper code fence around the
 
 **Rich media rules:**
 - Prefer **Mermaid** for figures. Syntax must be valid for **Mermaid v10+** (flowchart/graph).
-- **Flowchart edge labels (critical):** write `SourceID -->|edge label| TargetID` with a **space** before the target node — e.g. `A -->|defines| B`. **Never** write `-->|label|> B` (extra `>` after `|` breaks the parser). Use quoted node text when labels contain spaces or brackets: `A["Open file"] -->|reads| B["Data model"]`.
+- **Flowchart edge labels (critical):** write `SourceID -->|edge label| TargetID` with **exactly one** ASCII space before the target — e.g. `A -->|defines| B`. **Never** `-->|label|> B` (extra `>`) or `-->|label|  B` (double space); both break Mermaid 11. Use quoted node text when labels contain spaces or brackets: `A["Open file"] -->|reads| B["Data model"]`.
 - You **may** add `![description](https://...)` **only** if you use a **stable, publicly accessible HTTPS URL** you know exists (e.g. well-known documentation or Wikimedia). Never invent URLs. If unsure, omit images and use Mermaid instead.
 
 **Style:**

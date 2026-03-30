@@ -23,6 +23,14 @@ export function sanitizeMermaidSource(raw) {
   // Broken "arrow" written as --->|x|> 
   s = s.replace(/(---+>)(\|[^|\r\n]+\|)>/g, "$1$2 ");
 
+  // LLMs often insert double spaces after edge labels: -->|feeds|  B — Mermaid 11 can fail with "got 'SPACE'"
+  s = s.replace(/((?:-->|-\.->|==>)(\|[^|\r\n]+\|))[ \t]{2,}/g, "$1 ");
+  // Same for unlabeled edges on one line: A -->  B (only spaces/tabs, not newlines)
+  s = s.replace(/(-->|-\.->|==>)[ \t]{2,}(?=[A-Za-z0-9_"(\[\u201c])/g, "$1 ");
+
+  // Prefer flowchart keyword (graph is legacy). Only at string start — avoid touching lines named "graph".
+  s = s.replace(/^\s*graph(\s+)/i, "flowchart$1");
+
   const firstNonEmpty = s.split("\n").find((l) => l.trim())?.trim() || "";
   const hasDiagramDecl =
     /^(graph\b|flowchart\b|sequenceDiagram\b|classDiagram\b|stateDiagram-v2\b|stateDiagram\b|erDiagram\b|mindmap\b|timeline\b|pie\b|gitGraph\b|C4Context\b|quadrantChart\b|journey\b|sankey-beta\b|block-beta\b|architecture-beta\b)/i.test(
