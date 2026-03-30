@@ -21,6 +21,7 @@ async def submit_onboarding(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> LearningPathOut:
+    """Create or **replace** the user's learning path (safe to call again after changing goals)."""
     if body.career_goal_id == "custom":
         assert body.custom_goal_description is not None
         path = await build_custom_personalized_path(

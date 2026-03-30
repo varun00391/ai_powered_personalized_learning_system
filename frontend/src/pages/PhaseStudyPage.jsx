@@ -1,35 +1,51 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import PhaseKnowledgeSection from "../components/PhaseKnowledgeSection.jsx";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext.jsx";
 
-function StudyGuideBody({ content }) {
-  if (!content) return null;
-  const chunks = content.split(/\n(?=## )/);
+/** Split markdown on top-level ## headings into paginated lessons. */
+function splitGuideIntoPages(content) {
+  if (!content || !String(content).trim()) return [];
+  const raw = String(content)
+    .trim()
+    .split(/\n(?=## )/)
+    .map((c) => c.trim())
+    .filter(Boolean);
+  return raw.map((chunk) => {
+    if (chunk.startsWith("## ")) {
+      const rest = chunk.slice(3);
+      const nl = rest.indexOf("\n");
+      const title = nl === -1 ? rest.trim() : rest.slice(0, nl).trim();
+      const body = nl === -1 ? "" : rest.slice(nl + 1).trim();
+      return { title, body };
+    }
+    return { title: "Introduction", body: chunk };
+  });
+}
+
+function LessonBody({ body }) {
+  if (!body) return null;
+  const segments = body.split(/\n(?=### )/).map((s) => s.trim()).filter(Boolean);
   return (
-    <div className="space-y-6">
-      {chunks.map((chunk, i) => {
-        const trimmed = chunk.trim();
-        if (!trimmed) return null;
-        if (trimmed.startsWith("## ")) {
-          const rest = trimmed.slice(3);
-          const nl = rest.indexOf("\n");
-          const heading = nl === -1 ? rest : rest.slice(0, nl);
-          const body = nl === -1 ? "" : rest.slice(nl + 1).trim();
+    <div className="space-y-5">
+      {segments.map((seg, i) => {
+        if (seg.startsWith("### ")) {
+          const nl = seg.indexOf("\n");
+          const head = nl === -1 ? seg.slice(4).trim() : seg.slice(4, nl).trim();
+          const rest = nl === -1 ? "" : seg.slice(nl + 1).trim();
           return (
-            <section key={i}>
-              <h2 className="font-display text-lg font-semibold text-indigo-200">{heading}</h2>
-              {body && (
-                <div className="mt-2 text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">{body}</div>
-              )}
-            </section>
+            <div key={i}>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-indigo-300/90">{head}</h3>
+              {rest ? (
+                <div className="mt-2 text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">{rest}</div>
+              ) : null}
+            </div>
           );
         }
         return (
-          <p key={i} className="text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">
-            {trimmed}
-          </p>
+          <div key={i} className="text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">
+            {seg}
+          </div>
         );
       })}
     </div>
@@ -49,10 +65,19 @@ export default function PhaseStudyPage() {
   const [guideErr, setGuideErr] = useState("");
   const [loadingPath, setLoadingPath] = useState(true);
   const [loadingGuide, setLoadingGuide] = useState(false);
-  const [showMcq, setShowMcq] = useState(false);
-  const mcqRef = useRef(null);
+  const [guidePageIndex, setGuidePageIndex] = useState(0);
+  const lessonTopRef = useRef(null);
 
   const validIndex = useMemo(() => Number.isFinite(idx) && idx >= 1, [idx]);
+
+  const guidePages = useMemo(() => splitGuideIntoPages(guide), [guide]);
+  const guidePageCount = guidePages.length;
+  const clampedGuidePage =
+    guidePageCount > 0
+      ? Math.min(Math.max(guidePageIndex, 0), guidePageCount - 1)
+      : 0;
+  const currentLesson = guidePages[clampedGuidePage] || null;
+  const isLastGuidePage = guidePageCount > 0 && clampedGuidePage === guidePageCount - 1;
 
   useEffect(() => {
     if (!validIndex) {
@@ -100,18 +125,30 @@ export default function PhaseStudyPage() {
   }, [phase, token, idx, validIndex]);
 
   useEffect(() => {
-    if (showMcq && mcqRef.current) {
-      mcqRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    setGuidePageIndex(0);
+  }, [guide]);
+
+  useEffect(() => {
+    if (lessonTopRef.current && guide && !loadingGuide) {
+      lessonTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [showMcq]);
+  }, [clampedGuidePage, guide, loadingGuide]);
 
   return (
     <div className="min-h-screen bg-ink-950">
       <header className="border-b border-white/10 bg-ink-900/50 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <Link to="/dashboard" className="text-sm text-indigo-300 hover:text-indigo-200">
-            ← Back to dashboard
-          </Link>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link to="/dashboard" className="text-sm text-indigo-300 hover:text-indigo-200">
+              ← Back to dashboard
+            </Link>
+            <Link
+              to="/onboarding"
+              className="text-sm text-slate-400 underline decoration-white/20 underline-offset-2 hover:text-indigo-200"
+            >
+              Change learning path
+            </Link>
+          </div>
           <div className="flex items-center gap-4 text-sm">
             <span className="hidden text-slate-500 sm:inline">{user?.email}</span>
             <button
@@ -169,46 +206,99 @@ export default function PhaseStudyPage() {
                 )}
               </div>
               <p className="mt-1 text-xs text-slate-500">
-                Read this first. It is tailored to this phase and your goal (with Groq when{" "}
-                <code className="text-indigo-400">GROQ_API_KEY</code> is set).
+                Work through each lesson below in order. When you are done, open the{" "}
+                <strong className="text-slate-400">knowledge check</strong> on a separate page — questions are saved on
+                the server when this guide is generated. With Groq (<code className="text-indigo-400">GROQ_API_KEY</code>
+                ), content is a full tutorial per topic.
               </p>
 
-              {loadingGuide && <p className="mt-6 text-slate-500">Generating your guide…</p>}
+              {loadingGuide && <p className="mt-6 text-slate-500">Generating your study material…</p>}
               {guideErr && (
                 <p className="mt-6 text-sm text-red-300">{guideErr}</p>
               )}
-              {!loadingGuide && !guideErr && guide && (
-                <div className="mt-6 rounded-2xl border border-white/5 bg-black/20 p-5">
-                  <StudyGuideBody content={guide} />
+              {!loadingGuide && !guideErr && guide && currentLesson && (
+                <div ref={lessonTopRef} className="mt-6 scroll-mt-24 space-y-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs font-medium text-slate-400">
+                      Lesson{" "}
+                      <span className="text-indigo-300">
+                        {clampedGuidePage + 1} of {guidePageCount}
+                      </span>
+                    </p>
+                    <div
+                      className="h-1.5 flex-1 max-w-full overflow-hidden rounded-full bg-white/10 sm:max-w-xs"
+                      role="progressbar"
+                      aria-valuenow={clampedGuidePage + 1}
+                      aria-valuemin={1}
+                      aria-valuemax={guidePageCount}
+                    >
+                      <div
+                        className="h-full rounded-full bg-indigo-500 transition-all duration-300"
+                        style={{
+                          width: `${((clampedGuidePage + 1) / guidePageCount) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/5 bg-black/20 p-5 md:p-6">
+                    <h3 className="font-display text-lg font-semibold text-indigo-200 md:text-xl">
+                      {currentLesson.title}
+                    </h3>
+                    <div className="mt-4">
+                      <LessonBody body={currentLesson.body} />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <button
+                      type="button"
+                      disabled={clampedGuidePage <= 0}
+                      onClick={() =>
+                        setGuidePageIndex((p) => {
+                          const c = Math.min(Math.max(p, 0), guidePageCount - 1);
+                          return Math.max(0, c - 1);
+                        })
+                      }
+                      className="rounded-xl border border-white/15 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      ← Previous lesson
+                    </button>
+                    {!isLastGuidePage && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setGuidePageIndex((p) => {
+                            const c = Math.min(Math.max(p, 0), guidePageCount - 1);
+                            return Math.min(guidePageCount - 1, c + 1);
+                          })
+                        }
+                        className="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/15"
+                      >
+                        Next lesson →
+                      </button>
+                    )}
+                  </div>
+
+                  {!isLastGuidePage && (
+                    <p className="text-xs text-slate-500">
+                      Finish all lessons, then take the knowledge check on the next page. You are on lesson{" "}
+                      {clampedGuidePage + 1} of {guidePageCount}.
+                    </p>
+                  )}
                 </div>
               )}
 
-              {!showMcq && !loadingGuide && guide && (
+              {!loadingGuide && guide && isLastGuidePage && (
                 <button
                   type="button"
-                  onClick={() => setShowMcq(true)}
+                  onClick={() => nav(`/dashboard/phase/${idx}/quiz`)}
                   className="mt-8 w-full rounded-xl bg-indigo-500 py-3 text-sm font-semibold text-white hover:bg-indigo-400 md:w-auto md:px-10"
                 >
-                  I’ve finished reading — go to knowledge checks
+                  Continue to knowledge check (separate page)
                 </button>
               )}
             </div>
-
-            {showMcq && (
-              <div ref={mcqRef} className="mt-10 scroll-mt-8 rounded-3xl border border-indigo-500/25 bg-indigo-500/5 p-6 md:p-8">
-                <h2 className="font-display text-lg font-semibold text-white">Knowledge checks</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  Short MCQs based on this phase’s topics. They are for self-check only (not graded or stored).
-                </p>
-                <PhaseKnowledgeSection phase={phase} variant="mcqs_only" />
-                <Link
-                  to="/dashboard"
-                  className="mt-8 inline-block text-sm text-indigo-300 hover:text-indigo-200"
-                >
-                  ← Back to full dashboard
-                </Link>
-              </div>
-            )}
           </>
         )}
       </main>

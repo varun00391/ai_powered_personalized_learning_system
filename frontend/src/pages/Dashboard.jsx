@@ -4,8 +4,8 @@ import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const WELCOME_ASSISTANT =
-  "Hi — I'm **LearnGuide**. **Open any phase** from your path to get an AI study guide, then knowledge-check questions. " +
-  "You can also ask me anything about your plan here.";
+  "Hi — I'm **LearnGuide**. Open a phase to start the **study guide**; the **knowledge check** (with saved scores) comes right after you finish the lessons. " +
+  "Ask me anything about your plan here.";
 
 export default function Dashboard() {
   const nav = useNavigate();
@@ -83,8 +83,14 @@ export default function Dashboard() {
           <Link to="/" className="font-display text-lg font-semibold text-white">
             LearnOS<span className="text-indigo-400"> AI</span>
           </Link>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-slate-400">{user?.email}</span>
+          <div className="flex flex-wrap items-center justify-end gap-3 text-sm">
+            <Link
+              to="/onboarding"
+              className="rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-1.5 text-indigo-200 hover:border-indigo-400/60 hover:bg-indigo-500/15"
+            >
+              Change learning path
+            </Link>
+            <span className="hidden text-slate-400 sm:inline">{user?.email}</span>
             <button
               type="button"
               onClick={logout}
@@ -99,10 +105,13 @@ export default function Dashboard() {
       <main className="mx-auto max-w-6xl px-6 py-10">
         <h1 className="font-display text-3xl font-bold text-white">Your dashboard</h1>
         <p className="mt-2 max-w-3xl text-slate-400">
-          <strong className="font-medium text-slate-300">Click a phase</strong> to open its page: an{" "}
-          <strong className="font-medium text-slate-300">AI study guide</strong> (Groq when configured), then{" "}
-          <strong className="font-medium text-slate-300">MCQ knowledge checks</strong> after you finish reading.
-          Streaming video and graded quiz APIs are still placeholders — see recommendations. Tutor:{" "}
+          Want a different goal or track? Use <strong className="font-medium text-slate-300">Change learning path</strong>{" "}
+          in the header to run onboarding again — your new plan replaces the current one.
+        </p>
+        <p className="mt-3 max-w-3xl text-slate-400">
+          <strong className="font-medium text-slate-300">Click a phase</strong> to start its study guide. When you
+          finish all lessons, you&apos;ll move on to the knowledge check and see your score (attempts are saved).
+          Streaming video is still a placeholder — see recommendations. Tutor:{" "}
           <code className="text-indigo-300">GROQ_API_KEY</code>.
         </p>
 
@@ -136,8 +145,8 @@ export default function Dashboard() {
                     </p>
                   )}
                   <p className="text-xs text-slate-500">
-                    <span className="text-indigo-300">Tip:</span> open a phase for an AI-written study guide, then
-                    knowledge checks on the next step.
+                    <span className="text-indigo-300">Tip:</span> click a phase to open the study guide. After you
+                    finish all lessons, you&apos;ll continue to the knowledge check for a scored quiz.
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {path.phases.map((ph) => (
@@ -166,11 +175,11 @@ export default function Dashboard() {
                             <li key={s}>{s}</li>
                           ))}
                         </ul>
-                        <p className="mt-3 text-xs font-medium text-indigo-300/90">Open study page →</p>
+                        <p className="mt-3 text-xs font-medium text-indigo-300/90">Open study guide →</p>
                         <p className="mt-1 text-xs text-slate-500">
                           ~{ph.estimated_hours}h · ~{ph.estimated_weeks} wk
                           {ph.knowledge_checks?.length > 0 && (
-                            <span className="ml-2 text-slate-500">· {ph.knowledge_checks.length} checks after reading</span>
+                            <span className="ml-2 text-slate-500">· {ph.knowledge_checks.length} template checks</span>
                           )}
                         </p>
                       </button>

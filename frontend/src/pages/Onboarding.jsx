@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const STEPS = ["goal", "skills", "time", "windows", "flex"];
 
 export default function Onboarding() {
-  const { token, refreshUser } = useAuth();
+  const { token, user, loading: authLoading, refreshUser } = useAuth();
   const nav = useNavigate();
   const [step, setStep] = useState(0);
   const [careers, setCareers] = useState([]);
@@ -27,18 +27,38 @@ export default function Onboarding() {
   );
 
   useEffect(() => {
+    if (authLoading) return;
     (async () => {
       try {
         const data = await apiFetch("/api/v1/careers");
         setCareers(data);
-        if (data[0]) setCareerGoalId(data[0].id);
+        if (data[0] && !user?.onboarding_complete) {
+          setCareerGoalId(data[0].id);
+        }
       } catch {
         setErr("Could not load career options.");
       } finally {
         setLoadingCareers(false);
       }
     })();
-  }, []);
+  }, [authLoading, user?.onboarding_complete]);
+
+  useEffect(() => {
+    if (!user?.onboarding_complete || careers.length === 0) return;
+    if (user.career_goal_id) setCareerGoalId(user.career_goal_id);
+    if (user.custom_goal_text) setCustomGoalDescription(user.custom_goal_text);
+    const snap = user.skill_snapshot;
+    if (snap && typeof snap === "object") {
+      if (snap.python_level) setPythonLevel(String(snap.python_level));
+      if (snap.sql_level) setSqlLevel(String(snap.sql_level));
+    }
+    if (user.hours_per_week != null) setHoursPerWeek(user.hours_per_week);
+    if (Array.isArray(user.preferred_study_windows)) {
+      setWindows([...user.preferred_study_windows]);
+    }
+    if (user.schedule_flexibility) setFlex(user.schedule_flexibility);
+    if (user.timezone) setTimezone(user.timezone);
+  }, [user, careers.length]);
 
   function toggleWindow(w) {
     setWindows((prev) => (prev.includes(w) ? prev.filter((x) => x !== w) : [...prev, w]));
@@ -84,11 +104,33 @@ export default function Onboarding() {
 
   const progress = Math.round(((step + 1) / STEPS.length) * 100);
 
+  const isChangingPath = Boolean(user?.onboarding_complete);
+
   return (
     <div className="min-h-screen bg-ink-950 px-4 py-10">
       <div className="mx-auto max-w-xl">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          {isChangingPath ? (
+            <Link
+              to="/dashboard"
+              className="text-sm text-indigo-300 hover:text-indigo-200"
+            >
+              ← Back to dashboard
+            </Link>
+          ) : (
+            <span className="text-sm text-slate-600" aria-hidden="true" />
+          )}
+        </div>
+        {isChangingPath && (
+          <div className="mb-6 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/95">
+            You are choosing a <strong className="font-medium text-amber-50">new learning path</strong>. Submitting
+            replaces your current path and phases — study progress in the app is not kept per path.
+          </div>
+        )}
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="font-display text-xl font-bold text-white">Personalise your path</h1>
+          <h1 className="font-display text-xl font-bold text-white">
+            {isChangingPath ? "Change your learning path" : "Personalise your path"}
+          </h1>
           <span className="text-xs text-slate-500">{progress}%</span>
         </div>
         <div className="h-1 overflow-hidden rounded-full bg-white/10">
@@ -324,7 +366,13 @@ export default function Onboarding() {
               }
               className="rounded-xl bg-indigo-500 px-6 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50"
             >
-              {step === STEPS.length - 1 ? (submitting ? "Saving…" : "Build my path") : "Continue"}
+              {step === STEPS.length - 1
+                ? submitting
+                  ? "Saving…"
+                  : isChangingPath
+                    ? "Replace path with this plan"
+                    : "Build my path"
+                : "Continue"}
             </button>
           </div>
         </div>

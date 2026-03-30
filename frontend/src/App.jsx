@@ -6,6 +6,7 @@ import Register from "./pages/Register.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import PhaseStudyPage from "./pages/PhaseStudyPage.jsx";
+import PhaseQuizPage from "./pages/PhaseQuizPage.jsx";
 
 function LoadingScreen() {
   return (
@@ -16,10 +17,9 @@ function LoadingScreen() {
 }
 
 function OnboardingRoute({ children }) {
-  const { token, user, loading } = useAuth();
+  const { token, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!token) return <Navigate to="/login" replace />;
-  if (user?.onboarding_complete) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -50,6 +50,14 @@ export default function App() {
         element={
           <DashboardRoute>
             <Dashboard />
+          </DashboardRoute>
+        }
+      />
+      <Route
+        path="/dashboard/phase/:phaseIndex/quiz"
+        element={
+          <DashboardRoute>
+            <PhaseQuizPage />
           </DashboardRoute>
         }
       />

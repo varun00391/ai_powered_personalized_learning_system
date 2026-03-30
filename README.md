@@ -1,6 +1,6 @@
 # LearnOS AI — Personalized learning (reference app)
 
-A full-stack reference implementation of a **personalized learning path** system: onboarding captures goals, experience, schedule, and weekly availability; the backend builds phased roadmaps with **objectives, study tips, activities, and knowledge-check questions**; each phase opens a **dedicated page** with an **AI study guide** (Groq) and **MCQs after reading**; the **dashboard** also includes a **multi-turn AI tutor** (Groq).
+A full-stack reference implementation of a **personalized learning path** system: onboarding captures goals, experience, schedule, and weekly availability; the backend builds phased roadmaps with **objectives, study tips, activities, and knowledge-check questions**; each phase opens a **dedicated page** with an **AI study guide** (Groq) and **MCQs after reading**—with `**GROQ_API_KEY` set, those MCQs are generated from the same study guide text** (otherwise they use the phase template checks); the **dashboard** also includes a **multi-turn AI tutor** (Groq).
 
 This is a **foundation** you can extend with real video CMS, HLS playback, and a graded assessment API (as described in a typical LearnOS-style architecture).
 
@@ -8,15 +8,17 @@ This is a **foundation** you can extend with real video CMS, HLS playback, and a
 
 ## What’s included
 
-| Area | Details |
-|------|---------|
-| **Auth** | Register / login, JWT (access token in `localStorage`). |
-| **Onboarding** | Career presets or **custom free-text goal**; Python/SQL level; hours/week; study windows; flexibility. |
-| **Learning paths** | Preset tracks (e.g. Data Engineer, ML Engineer) or **Groq-generated** phases for custom goals (with offline fallback). |
-| **Dashboard** | Path overview; **phase pages** (AI study guide → MCQs); recommendations; ChatGPT-style **tutor chat**. |
-| **AI** | **Groq** OpenAI-compatible API for tutor + optional custom path generation. Works offline with templated responses when no key is set. |
-| **Data** | **PostgreSQL** (users, learning paths, JSONB phase payloads). |
-| **Ops** | **Docker Compose**: `db`, `backend`, `frontend` (nginx). |
+
+| Area               | Details                                                                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Auth**           | Register / login, JWT (access token in `localStorage`).                                                                                |
+| **Onboarding**     | Career presets or **custom free-text goal**; Python/SQL level; hours/week; study windows; flexibility. **Re-run anytime** (“Change learning path”) — replaces the current path. |
+| **Learning paths** | Preset tracks (e.g. Data Engineer, ML Engineer) or **Groq-generated** phases for custom goals (with offline fallback).                 |
+| **Dashboard**      | Path overview; **phase pages** (multi-lesson study guide → MCQs); recommendations; ChatGPT-style **tutor chat**.                       |
+| **AI**             | **Groq** OpenAI-compatible API for tutor + optional custom path generation. Works offline with templated responses when no key is set. |
+| **Data**           | **PostgreSQL** (users, learning paths, JSONB phase payloads).                                                                          |
+| **Ops**            | **Docker Compose**: `db`, `backend`, `frontend` (nginx).                                                                               |
+
 
 ---
 
@@ -31,7 +33,7 @@ This is a **foundation** you can extend with real video CMS, HLS playback, and a
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose v2  
-  **or**
+**or**
 - Python 3.12+, Node.js 20+, and a running PostgreSQL instance.
 
 ---
@@ -47,11 +49,11 @@ docker compose up -d --build
 
 Then open:
 
-- **Web UI:** http://localhost:8080  
-- **API docs (Swagger):** http://localhost:8000/docs  
-- **Health:** http://localhost:8000/health  
+- **Web UI:** [http://localhost:8080](http://localhost:8080)  
+- **API docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)  
+- **Health:** [http://localhost:8000/health](http://localhost:8000/health)
 
-**First run:** register → complete onboarding → open the dashboard → **click a phase** to open its study page (AI guide, then knowledge checks).
+**First run:** register → complete onboarding → open the dashboard → **click a phase** to open its study page (paginated lessons per `##` section, then knowledge checks). With Groq, the guide is long-form and covers each phase skill in depth.
 
 To stop:
 
@@ -69,15 +71,17 @@ docker compose down -v
 
 ## Environment variables
 
-Compose reads a **`.env`** file in the project root (same directory as `docker-compose.yml`) if present.
+Compose reads a `**.env**` file in the project root (same directory as `docker-compose.yml`) if present.
 
-| Variable | Service | Description |
-|----------|---------|-------------|
-| `GROQ_API_KEY` | backend | Enables Groq for the **AI tutor** and improves **custom goal** path generation. Get a key from [Groq Console](https://console.groq.com/). |
-| `GROQ_MODEL` | backend | Default: `llama-3.3-70b-versatile`. Override with any model your Groq account supports. |
-| `JWT_SECRET` | backend | Secret for signing JWTs. **Change in production.** |
-| `VITE_API_URL` | frontend **build** | Browser must reach the API. Default when building the image: `http://localhost:8000`. If you deploy behind another host, rebuild with the public API URL. |
-| `DATABASE_URL` | backend | Set automatically in Compose to the `db` service. For local Python runs, point at your Postgres DSN (async: `postgresql+asyncpg://...`). |
+
+| Variable       | Service            | Description                                                                                                                                                                                 |
+| -------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GROQ_API_KEY` | backend            | Enables Groq for the **AI tutor**, **study-guide–aligned knowledge checks** (MCQs), and improved **custom goal** path generation. Get a key from [Groq Console](https://console.groq.com/). |
+| `GROQ_MODEL`   | backend            | Default: `llama-3.3-70b-versatile`. Override with any model your Groq account supports.                                                                                                     |
+| `JWT_SECRET`   | backend            | Secret for signing JWTs. **Change in production.**                                                                                                                                          |
+| `VITE_API_URL` | frontend **build** | Browser must reach the API. Default when building the image: `http://localhost:8000`. If you deploy behind another host, rebuild with the public API URL.                                   |
+| `DATABASE_URL` | backend            | Set automatically in Compose to the `db` service. For local Python runs, point at your Postgres DSN (async: `postgresql+asyncpg://...`).                                                    |
+
 
 Example `.env`:
 
@@ -111,7 +115,7 @@ export GROQ_API_KEY=   # optional
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-API: http://127.0.0.1:8000/docs  
+API: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)  
 
 On startup, the app runs `create_all` and lightweight **SQL patches** (`ALTER TABLE ... IF NOT EXISTS`) for older databases.
 
@@ -123,7 +127,7 @@ npm install
 npm run dev
 ```
 
-Vite dev server proxies `/api` and `/health` to port **8000**. UI: http://127.0.0.1:5173  
+Vite dev server proxies `/api` and `/health` to port **8000**. UI: [http://127.0.0.1:5173](http://127.0.0.1:5173)  
 
 ---
 
@@ -148,7 +152,7 @@ Vite dev server proxies `/api` and `/health` to port **8000**. UI: http://127.0.
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/          # Landing, Login, Register, Onboarding, Dashboard, PhaseStudyPage
+│   │   ├── pages/          # … Dashboard, PhaseStudyPage, PhaseQuizPage
 │   │   ├── components/     # e.g. PhaseKnowledgeSection
 │   │   └── api/client.js
 │   ├── Dockerfile
@@ -160,19 +164,23 @@ Vite dev server proxies `/api` and `/health` to port **8000**. UI: http://127.0.
 
 ## Main API routes (short)
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/v1/auth/register` | Create user, returns JWT |
-| POST | `/api/v1/auth/login` | Login, returns JWT |
-| GET | `/api/v1/auth/me` | Current user (Bearer token) |
-| GET | `/api/v1/careers` | Preset careers + `custom` |
-| POST | `/api/v1/learner/onboarding` | Submit onboarding, creates path |
-| GET | `/api/v1/learning-paths/current` | Current path (phases include enrichment / backfill) |
-| POST | `/api/v1/learning-paths/current/phase/{n}/study-guide` | AI or template **study guide** markdown for phase `n` |
-| GET | `/api/v1/recommendations` | Cold-start style suggestions |
-| POST | `/api/v1/tutor/chat` | Multi-turn chat: `{ messages, phase_context? }` |
 
-Full schemas: **http://localhost:8000/docs**
+| Method | Path                                                   | Purpose                                               |
+| ------ | ------------------------------------------------------ | ----------------------------------------------------- |
+| POST   | `/api/v1/auth/register`                                | Create user, returns JWT                              |
+| POST   | `/api/v1/auth/login`                                   | Login, returns JWT                                    |
+| GET    | `/api/v1/auth/me`                                      | Current user (Bearer token)                           |
+| GET    | `/api/v1/careers`                                      | Preset careers + `custom`                             |
+| POST   | `/api/v1/learner/onboarding`                           | Submit onboarding, creates path                       |
+| GET    | `/api/v1/learning-paths/current`                       | Current path (phases include enrichment / backfill)   |
+| POST   | `/api/v1/learning-paths/current/phase/{n}/study-guide` | AI or template **study guide**; saves MCQ snapshot for the quiz |
+| GET    | `/api/v1/learning-paths/current/phase/{n}/knowledge-checks` | Saved questions + **last score** + attempt history (after study-guide) |
+| POST   | `/api/v1/learning-paths/current/phase/{n}/knowledge-checks/submit` | Submit answers `{ "answers": [0,2,...] }` — persists score |
+| GET    | `/api/v1/recommendations`                              | Cold-start style suggestions                          |
+| POST   | `/api/v1/tutor/chat`                                   | Multi-turn chat: `{ messages, phase_context? }`       |
+
+
+Full schemas: **[http://localhost:8000/docs](http://localhost:8000/docs)**
 
 ---
 
@@ -181,8 +189,8 @@ Full schemas: **http://localhost:8000/docs**
 Each phase in the API includes:
 
 - `learning_objectives`, `study_tips`, `key_activities`, `knowledge_checks` (MCQs)  
-- **UI flow:** dashboard → `/dashboard/phase/{index}` → **POST study-guide** (Groq when `GROQ_API_KEY` is set, else structured template) → user reads → **Knowledge checks** section (same MCQs from the API)  
-- `study_tips` enrichment uses default **video**-oriented hints unless you extend onboarding again  
+- **UI flow:** dashboard → **click a phase** → study guide (`/dashboard/phase/{index}`) → after all lessons → knowledge check (`/dashboard/phase/{index}/quiz`; scores and history in Postgres)  
+- `study_tips` enrichment uses default **video**-oriented hints unless you extend onboarding again
 
 Paths created **before** enrichment may be **backfilled on read** when `knowledge_checks` is missing.
 
@@ -191,16 +199,16 @@ Paths created **before** enrichment may be **backfilled on read** when `knowledg
 ## What’s not implemented (typical next steps)
 
 - **Video:** HLS/CDN, upload pipeline, player.  
-- **Graded quizzes:** Server-side scoring, attempt history, anti-cheat.  
+- **Production quizzes:** Proctoring, item banks, LMS export (basic MCQ scoring + history exists for phase checks).  
 - **Labs:** Sandboxed runtimes or external lab links.  
 - **Knowledge graph DB:** Neo4j (paths are in-process / Groq today).  
-- **Events / analytics:** Kafka, streaming (architecture doc style).  
+- **Events / analytics:** Kafka, streaming (architecture doc style).
 
 ---
 
 ## Security notes
 
-- Change **`JWT_SECRET`** for any shared or production deployment.  
+- Change `**JWT_SECRET`** for any shared or production deployment.  
 - Do **not** commit real `.env` files with secrets (keep `.env` in `.gitignore`).  
 - This project is a **reference**: add HTTPS, rate limiting, and hardened headers before public production use.
 

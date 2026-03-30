@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,3 +51,26 @@ class LearningPath(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user: Mapped["User"] = relationship("User", back_populates="learning_paths")
+    phase_knowledge_rows: Mapped[list["PhaseKnowledgeProgress"]] = relationship(
+        "PhaseKnowledgeProgress",
+        back_populates="learning_path",
+        cascade="all, delete-orphan",
+    )
+
+
+class PhaseKnowledgeProgress(Base):
+    """Saved knowledge-check questions (from last study-guide run) and quiz scores per phase."""
+
+    __tablename__ = "phase_knowledge_progress"
+    __table_args__ = (UniqueConstraint("learning_path_id", "phase_index", name="uq_phase_knowledge_lp_phase"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    learning_path_id: Mapped[str] = mapped_column(String(36), ForeignKey("learning_paths.id", ondelete="CASCADE"))
+    phase_index: Mapped[int] = mapped_column(Integer)
+    knowledge_checks: Mapped[list] = mapped_column(JSONB, nullable=False)
+    mcq_aligned_to_guide: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    attempts_history: Mapped[list] = mapped_column(JSONB, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    learning_path: Mapped["LearningPath"] = relationship("LearningPath", back_populates="phase_knowledge_rows")

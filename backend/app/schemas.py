@@ -30,6 +30,7 @@ class UserPublic(BaseModel):
     learning_style: str | None
     hours_per_week: int | None
     experience_band: str | None
+    skill_snapshot: dict | None = None
     preferred_study_windows: list[str] | None
     schedule_flexibility: str | None
     timezone: str | None
@@ -94,6 +95,45 @@ class PhaseOut(BaseModel):
 class PhaseStudyGuideOut(BaseModel):
     content: str
     source: Literal["groq", "template"]
+    knowledge_checks: list[KnowledgeCheckOut] = Field(
+        default_factory=list,
+        description="Guide-aligned MCQs when Groq succeeds; else phase template checks.",
+    )
+    mcq_aligned_to_guide: bool = False
+
+
+class QuizAnswerDetailOut(BaseModel):
+    question_index: int
+    selected_index: int
+    correct_index: int
+    is_correct: bool
+
+
+class QuizResultOut(BaseModel):
+    correct: int
+    incorrect: int
+    total: int
+    score_percent: float
+    completed_at: str
+    answers: list[int]
+    details: list[QuizAnswerDetailOut] = Field(default_factory=list)
+
+
+class PhaseKnowledgeBundleOut(BaseModel):
+    phase_index: int
+    knowledge_checks: list[KnowledgeCheckOut]
+    mcq_aligned_to_guide: bool
+    last_result: QuizResultOut | None = None
+    attempts_history: list[QuizResultOut] = Field(default_factory=list)
+
+
+class QuizSubmitIn(BaseModel):
+    answers: list[int]
+
+
+class QuizSubmitOut(BaseModel):
+    result: QuizResultOut
+    bundle: PhaseKnowledgeBundleOut
 
 
 class LearningPathOut(BaseModel):
