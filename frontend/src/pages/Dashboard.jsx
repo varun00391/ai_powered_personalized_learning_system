@@ -11,10 +11,8 @@ export default function Dashboard() {
   const nav = useNavigate();
   const { token, user, logout } = useAuth();
   const [path, setPath] = useState(null);
-  const [recs, setRecs] = useState([]);
   const [messages, setMessages] = useState([{ role: "assistant", content: WELCOME_ASSISTANT }]);
   const [input, setInput] = useState("");
-  const [activityOpen, setActivityOpen] = useState(null);
   const [loadingPath, setLoadingPath] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
   const scrollRef = useRef(null);
@@ -22,12 +20,8 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const [p, r] = await Promise.all([
-          apiFetch("/api/v1/learning-paths/current", { token }),
-          apiFetch("/api/v1/recommendations", { token }),
-        ]);
+        const p = await apiFetch("/api/v1/learning-paths/current", { token });
         setPath(p);
-        setRecs(r);
       } catch {
         setPath(null);
       } finally {
@@ -109,14 +103,12 @@ export default function Dashboard() {
           in the header to run onboarding again — your new plan replaces the current one.
         </p>
         <p className="mt-3 max-w-3xl text-slate-400">
-          <strong className="font-medium text-slate-300">Click a phase</strong> to start its study guide. When you
-          finish all lessons, you&apos;ll move on to the knowledge check and see your score (attempts are saved).
-          Streaming video is still a placeholder — see recommendations. Tutor:{" "}
-          <code className="text-indigo-300">GROQ_API_KEY</code>.
+          <strong className="font-medium text-slate-300">Click a phase</strong> to start its study guide (technical
+          lessons with diagrams and images when the AI includes them). When you finish all lessons, continue to the
+          knowledge check — scores are saved. Tutor: <code className="text-indigo-300">GROQ_API_KEY</code>.
         </p>
 
         <div className="mt-10 flex flex-col gap-8 lg:flex-row lg:items-stretch">
-          {/* Left column: path + phases + recs */}
           <div className="min-w-0 flex-1 space-y-6">
             <div className="glass rounded-3xl p-6">
               <h2 className="font-display text-lg font-semibold text-white">Learning path</h2>
@@ -188,36 +180,8 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-
-            <div className="glass rounded-3xl p-6">
-              <h2 className="font-display text-lg font-semibold text-white">Recommended next</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Tap an item to see how video / quiz / lab would appear once content is connected.
-              </p>
-              <ul className="mt-4 space-y-3">
-                {recs.map((r) => (
-                  <li key={r.content_id}>
-                    <button
-                      type="button"
-                      onClick={() => setActivityOpen(r)}
-                      className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left transition hover:border-indigo-500/40 hover:bg-white/[0.06]"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-medium text-white">{r.title}</p>
-                        <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300">
-                          {r.format}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-500">{r.match_reason}</p>
-                      <p className="mt-2 text-xs text-indigo-300/90">Open · ~{r.duration_minutes} min</p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
 
-          {/* Chat column */}
           <section className="flex w-full shrink-0 flex-col rounded-3xl border border-white/10 bg-ink-900/40 lg:w-[420px] xl:w-[440px] lg:min-h-[620px] lg:sticky lg:top-6 lg:max-h-[calc(100vh-5rem)]">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <div>
@@ -293,56 +257,6 @@ export default function Dashboard() {
           </section>
         </div>
       </main>
-
-      {activityOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="activity-title"
-        >
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-ink-900 p-6 shadow-2xl">
-            <h2 id="activity-title" className="font-display text-xl font-semibold text-white">
-              {activityOpen.title}
-            </h2>
-            <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">{activityOpen.format} activity</p>
-            <p className="mt-4 text-sm text-slate-300">{activityOpen.match_reason}</p>
-
-            <div className="mt-6 space-y-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
-              <p>
-                <strong className="text-slate-200">Current build:</strong> each phase has its own page with a study guide
-                and MCQs. This card is still a placeholder for a{" "}
-                <strong className="text-slate-300">hosted lesson</strong> (video stream + tracked quiz submission).
-              </p>
-              <p>
-                <strong className="text-slate-200">Next integration steps:</strong> attach a content service (URLs for
-                HLS video), an assessments API for questions, and sandboxes or external lab links — as in your LearnOS
-                architecture (Content service, Quiz engine, video pipeline).
-              </p>
-            </div>
-
-            <div className="mt-6 rounded-xl border border-dashed border-indigo-500/30 bg-indigo-500/5 p-4 text-center text-sm text-slate-500">
-              {activityOpen.format === "video" && (
-                <p>Video player placeholder — adaptive stream would load here.</p>
-              )}
-              {activityOpen.format === "quiz" && (
-                <p>Quiz placeholder — MCQs and scoring would load here.</p>
-              )}
-              {!["video", "quiz"].includes(activityOpen.format) && (
-                <p>Mixed module placeholder — video + exercise tabs would load here.</p>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setActivityOpen(null)}
-              className="mt-6 w-full rounded-xl bg-white/10 py-2.5 text-sm font-medium text-white hover:bg-white/15"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

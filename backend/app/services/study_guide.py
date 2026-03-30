@@ -121,6 +121,18 @@ def _template_guide(user: User, phase: dict[str, Any]) -> str:
         f"You will work through **{len(skills) or 'several'} topic(s)** in order: {skills_txt}.",
         "Read each lesson below before moving on; use the knowledge checks after you finish all lessons.",
         "",
+        "### Phase roadmap (template diagram)",
+        "Adapt the nodes to your real stack:",
+        "",
+        "```mermaid",
+        "flowchart TB",
+        "  subgraph P[Phase scope]",
+        "    A[Foundations] --> B[Core tools]",
+        "    B --> C[Integration]",
+        "    C --> D[Production]",
+        "  end",
+        "```",
+        "",
         "### Learning objectives for this phase",
     ]
     for o in objectives:
@@ -134,24 +146,30 @@ def _template_guide(user: User, phase: dict[str, Any]) -> str:
             [
                 f"## Topic: {skill}",
                 "",
-                "### What this is",
-                f"**{skill}** is one building block of this phase. Define it in your own words after reading a short trusted overview (docs, course chapter, or article).",
+                "### What it is (technical)",
+                f"**{skill}** — write a precise definition: components, boundaries, and how practitioners measure success (latency, throughput, correctness, cost).",
                 "",
                 "### Why it matters",
-                "Understand how this topic connects to the phase title and your overall goal. Note one real-world situation where it applies.",
+                "Link to production scenarios: failure modes, trade-offs, and what breaks if this is done wrong.",
                 "",
-                "### Core ideas to master",
-                "- Main definitions and terminology.",
-                "- Typical workflow or pipeline steps involving this topic.",
-                "- How it depends on (or enables) other skills in this phase.",
+                "### How it works",
+                "- Step-by-step data/control flow or lifecycle.",
+                "- Key algorithms, protocols, file formats, or APIs (name them).",
+                "- Example: a minimal concrete scenario (e.g. sample command, query shape, or config snippet in backticks).",
                 "",
-                "### How to study it",
-                "- Skim then re-read with notes; draw a simple diagram if it helps.",
-                "- Complete one small exercise or example before the next lesson.",
+                "### Comparison or parameters",
+                "Use a small Markdown **table** comparing 2–3 common options (pros/cons or when to choose each), if relevant.",
+                "",
+                "### Diagram",
+                "Sketch the idea with a **Mermaid** diagram in a fenced block (` ```mermaid ` … ` ``` `). Example flowchart or sequenceDiagram tailored to this topic.",
+                "",
+                "### Pitfalls & operations",
+                "- Sharp edges in real systems (versioning, security, observability).",
+                "- What to monitor or test first.",
                 "",
                 "### Check your understanding",
-                "- Can you explain this topic to a peer in two minutes?",
-                "- What is the most common mistake beginners make here?",
+                "- Can you draw the flow without looking?",
+                "- What would you change under 10× load or stricter compliance?",
                 "",
             ]
         )
@@ -211,34 +229,38 @@ async def generate_phase_study_guide(user: User, phase: dict[str, Any]) -> tuple
         "learning_style": user.learning_style,
         "experience_band": user.experience_band,
     }
-    system = """You write in-depth study material for adult self-learners (tutorial quality, not a shallow overview).
+    system = """You write **technical, in-depth** study material for serious adult learners (engineering / data / CS level — not marketing blurbs or vague overviews).
 
-Output **plain Markdown only** (no outer code fences). Structure is mandatory:
+Output **GitHub-flavored Markdown only** (no outer wrapper code fence around the whole document). Structure is mandatory:
 
-1. Start with exactly one section: `## Phase introduction`
-   - What this phase covers and how it serves the learner's goal.
-   - A short roadmap listing every phase skill and the order to study them.
+1. `## Phase introduction`
+   - Scope of the phase and how it advances `learner_goal`.
+   - Explicit **roadmap**: list every `phase_skills` entry in study order.
+   - Optional: one **Mermaid** diagram (` ```mermaid ` … ` ``` `) showing how phase topics connect (flowchart, graph, or sequenceDiagram). Use valid Mermaid only.
 
-2. For **each** item in `phase_skills` (same order as in JSON), add one top-level section:
-   `## Topic: <skill name>` (use the skill string from the list; you may shorten slightly if redundant).
-   Inside each topic, use these ### subsections in order (substantive paragraphs + bullets; not one-liners):
-   - `### What it is` — clear definitions, scope, what is in/out of scope.
-   - `### Why it matters` — motivation, links to the phase title and goal.
-   - `### How it works` — mechanics, steps, architectures, or workflows as appropriate; use examples.
-   - `### Connections` — how this skill relates to other skills in this phase (dependencies, contrasts).
-   - `### Common pitfalls` — typical misconceptions and how to avoid them.
-   - `### Check your understanding` — 2–3 reflective prompts (not multiple-choice) the learner answers in their head or notes.
+2. For **each** string in `phase_skills` (same order), one section: `## Topic: <skill name>`.
+   Inside each topic, use **all** of these `###` subsections (dense paragraphs + bullets; include real terminology, metrics, and trade-offs):
+   - `### What it is` — precise definition; boundaries; what is in/out of scope; key standards or ecosystems.
+   - `### Why it matters` — production scenarios, failure modes, cost/latency/correctness angles tied to the learner goal.
+   - `### How it works` — step-by-step mechanics: protocols, algorithms, data/control flow, APIs, file formats, or SQL/CLI patterns. Use **inline code** for commands, flags, types, and identifiers. Give at least one **concrete mini-example** (e.g. sample pseudocode, query sketch, or config fragment in a fenced ```text or ```sql block).
+   - `### Comparisons` — a **Markdown table** comparing 2–4 relevant tools, patterns, or architectures (columns such as Use case | Pros | Cons | When to pick).
+   - `### Diagram` — at least one **Mermaid** diagram per topic when it helps (architecture, sequence, ER, or pipeline). If a second diagram adds clarity, add it. Skip only if truly redundant.
+   - `### Operations & pitfalls` — debugging, observability, security, versioning, and common mistakes practitioners make.
+   - `### Check your understanding` — 2–3 hard **reflective** questions (design or reasoning, not trivia).
 
-3. End with `## Synthesis and next steps`
-   - Integrate themes across topics; what to practice next; when they are ready for a knowledge check.
+3. `## Synthesis and next steps` — integrate cross-topic themes; hands-on practice suggestions; readiness for assessment.
 
-Rules:
-- Top-level sections must use `##` only for: Phase introduction, each Topic: …, and Synthesis (no other stray `##`).
-- Use `###` for subsections inside a topic.
-- Teach thoroughly: a motivated beginner should finish with real understanding, not buzzwords.
-- Cover **every** listed phase skill with comparable depth (do not skip or merge skills into one vague section).
-- If a skill name is broad (e.g. "Deep Learning"), break concepts down inside that topic without adding extra top-level `##` sections.
-- Prefer clarity over length, but this is **long-form** material: aim for roughly 250–500+ words per topic when there are multiple skills."""
+**Rich media rules:**
+- Prefer **Mermaid** for figures. Syntax must be valid for **Mermaid v10+** (flowchart/graph).
+- **Flowchart edge labels (critical):** write `SourceID -->|edge label| TargetID` with a **space** before the target node — e.g. `A -->|defines| B`. **Never** write `-->|label|> B` (extra `>` after `|` breaks the parser). Use quoted node text when labels contain spaces or brackets: `A["Open file"] -->|reads| B["Data model"]`.
+- You **may** add `![description](https://...)` **only** if you use a **stable, publicly accessible HTTPS URL** you know exists (e.g. well-known documentation or Wikimedia). Never invent URLs. If unsure, omit images and use Mermaid instead.
+
+**Style:**
+- Technical depth first: assume the reader wants to implement or reason about systems.
+- Aim **400–800+ words per topic** when several skills are listed (more if the model budget allows).
+- Top-level `##` headings only for: Phase introduction, each `Topic: …`, and Synthesis.
+
+Cover **every** phase skill with comparable depth; do not merge multiple skills into one vague topic section."""
     user_msg = "Generate the full multi-lesson study guide for this phase:\n" + json.dumps(
         payload, ensure_ascii=False, indent=2
     )
@@ -256,7 +278,7 @@ Rules:
             if lines and lines[-1].strip() == "```":
                 lines = lines[:-1]
             text = "\n".join(lines).strip()
-        if len(text) < 400:
+        if len(text) < 800:
             return _template_guide(user, phase), "template"
         return text, "groq"
     except Exception:

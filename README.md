@@ -14,7 +14,7 @@ This is a **foundation** you can extend with real video CMS, HLS playback, and a
 | **Auth**           | Register / login, JWT (access token in `localStorage`).                                                                                |
 | **Onboarding**     | Career presets or **custom** goal; **path-specific** comfort questions (`GET /careers` returns `asks_python` / `asks_sql` — e.g. Cloud Architect skips both; Full-Stack asks SQL only; Data/ML + custom ask both); hours/week; windows; flexibility. **Re-run anytime** (“Change learning path”). |
 | **Learning paths** | Preset tracks (e.g. Data Engineer, ML Engineer) or **Groq-generated** phases for custom goals (with offline fallback).                 |
-| **Dashboard**      | Path overview; **phase pages** (multi-lesson study guide → MCQs); recommendations; ChatGPT-style **tutor chat**.                       |
+| **Dashboard**      | Path overview; **phase pages** (Markdown study guide with diagrams/tables → MCQs); ChatGPT-style **tutor chat**. |
 | **AI**             | **Groq** OpenAI-compatible API for tutor + optional custom path generation. Works offline with templated responses when no key is set. |
 | **Data**           | **PostgreSQL** (users, learning paths, JSONB phase payloads).                                                                          |
 | **Ops**            | **Docker Compose**: `db`, `backend`, `frontend` (nginx).                                                                               |

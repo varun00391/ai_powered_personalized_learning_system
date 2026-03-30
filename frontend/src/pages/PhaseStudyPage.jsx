@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import StudyGuideMarkdown from "../components/StudyGuideMarkdown.jsx";
 import { apiFetch } from "../api/client";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -21,35 +22,6 @@ function splitGuideIntoPages(content) {
     }
     return { title: "Introduction", body: chunk };
   });
-}
-
-function LessonBody({ body }) {
-  if (!body) return null;
-  const segments = body.split(/\n(?=### )/).map((s) => s.trim()).filter(Boolean);
-  return (
-    <div className="space-y-5">
-      {segments.map((seg, i) => {
-        if (seg.startsWith("### ")) {
-          const nl = seg.indexOf("\n");
-          const head = nl === -1 ? seg.slice(4).trim() : seg.slice(4, nl).trim();
-          const rest = nl === -1 ? "" : seg.slice(nl + 1).trim();
-          return (
-            <div key={i}>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-indigo-300/90">{head}</h3>
-              {rest ? (
-                <div className="mt-2 text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">{rest}</div>
-              ) : null}
-            </div>
-          );
-        }
-        return (
-          <div key={i} className="text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">
-            {seg}
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 export default function PhaseStudyPage() {
@@ -206,10 +178,10 @@ export default function PhaseStudyPage() {
                 )}
               </div>
               <p className="mt-1 text-xs text-slate-500">
-                Work through each lesson below in order. When you are done, open the{" "}
-                <strong className="text-slate-400">knowledge check</strong> on a separate page — questions are saved on
-                the server when this guide is generated. With Groq (<code className="text-indigo-400">GROQ_API_KEY</code>
-                ), content is a full tutorial per topic.
+                Lessons render rich Markdown: tables, code blocks, <strong className="text-slate-400">Mermaid diagrams</strong>
+                , and trusted HTTPS images when included. With Groq (<code className="text-indigo-400">GROQ_API_KEY</code>
+                ), guides aim for deep technical detail per topic. Finish all lessons, then take the knowledge check (questions
+                are saved when this guide is generated).
               </p>
 
               {loadingGuide && <p className="mt-6 text-slate-500">Generating your study material…</p>}
@@ -246,7 +218,7 @@ export default function PhaseStudyPage() {
                       {currentLesson.title}
                     </h3>
                     <div className="mt-4">
-                      <LessonBody body={currentLesson.body} />
+                      <StudyGuideMarkdown content={currentLesson.body} />
                     </div>
                   </div>
 
